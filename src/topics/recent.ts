@@ -4,7 +4,7 @@ import posts from '../posts';
 
 import { TopicObject } from '../types';
 
-interface optionType {
+interface OptionType {
     uid: number;
     start: number;
     stop: number;
@@ -28,26 +28,27 @@ interface SortedTopicsLink {
 interface TopicsType {
     getRecentTopics(cid: number, uid: number, start: number, stop: number, filter: string): Promise<TopicsLink>;
     getSortedTopics(dict: SortedTopicsLink): Promise<TopicsLink>;
-    getLatestTopics(options: optionType): Promise<TopicsLink>;
+    getLatestTopics(options: OptionType): Promise<TopicsLink>;
     getLatestTidsFromSet(key: string, start: number, stop: number, term: string): Promise<number[]>;
-    getTopics(tids: number[], options: optionType): Promise<TopicObject>;
+    getTopics(tids: number[], options: OptionType): Promise<TopicObject>;
     updateLastPostTimeFromLastPid(tid: number): Promise<void>;
     getLatestUndeletedPid(tid: number): Promise<number>;
-    updateLastPostTime(tid: number, lastposttime: string): Promise<void>;
-    setTopicField(tid: number, key: string, value: string): Promise<void>;
+    updateLastPostTime(tid: number, lastposttime: number): Promise<void>;
+    setTopicField(tid: number, key: string, value: number): Promise<void>;
     getTopicFields(tid: number, arr:string[]): Promise<TopicObject>;
-    updateRecent(tid: number, timestamp: string): Promise<void>;
+    updateRecent(tid: number, timestamp: number): Promise<void>;
 }
 
 export = function (Topics: TopicsType) {
-    const terms = {
+    const terms: { [key: string]: number } = {
         day: 86400000,
         week: 604800000,
         month: 2592000000,
         year: 31104000000,
     };
 
-    Topics.getRecentTopics = async function (cid: number, uid: number, start: number, stop: number, filter: string) {
+    Topics.getRecentTopics = async function (cid: number, uid: number,
+        start: number, stop: number, filter: string): Promise<TopicsLink> {
         return await Topics.getSortedTopics({
             cids: cid,
             uid: uid,
@@ -59,40 +60,41 @@ export = function (Topics: TopicsType) {
     };
 
     /* not an orphan method, used in widget-essentials */
-    Topics.getLatestTopics = async function (options: optionType) {
+    Topics.getLatestTopics = async function (options: OptionType): Promise<TopicsLink> {
         // uid, start, stop, term
         const tids = await Topics.getLatestTidsFromSet('topics:recent', options.start, options.stop, options.term);
         const topics = await Topics.getTopics(tids, options);
         return { topics: topics, nextStart: options.stop + 1 };
     };
 
-    Topics.getLatestTidsFromSet = async function (set: string, start: number, stop: number, term: string) {
-        let since = terms.day;
+    Topics.getLatestTidsFromSet = async function (set: string, start: number,
+        stop: number, term: string): Promise<number[]> {
+        let since: number = terms.day;
         if (terms[term]) {
             since = terms[term];
         }
 
-        const count = stop === -1 ? stop : stop - start + 1;
+        const count: number = stop === -1 ? stop : stop - start + 1;
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        return await db.getSortedSetRevRangeByScore(set, start, count, '+inf', Date.now() - since);
+        return await db.getSortedSetRevRangeByScore(set, start, count, '+inf', Date.now() - since) as number[];
     };
 
-    Topics.updateLastPostTimeFromLastPid = async function (tid: number) {
+    Topics.updateLastPostTimeFromLastPid = async function (tid: number): Promise<void> {
         const pid = await Topics.getLatestUndeletedPid(tid);
         if (!pid) {
             return;
         }
         // The next line calls a function in a module that has not been updated to TS yet
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-        const timestamp = await posts.getPostField(pid, 'timestamp');
+        const timestamp: number = await posts.getPostField(pid, 'timestamp') as number;
         if (!timestamp) {
             return;
         }
         await Topics.updateLastPostTime(tid, timestamp);
     };
 
-    Topics.updateLastPostTime = async function (tid: number, lastposttime: string) {
+    Topics.updateLastPostTime = async function (tid: number, lastposttime: number): Promise<void> {
         await Topics.setTopicField(tid, 'lastposttime', lastposttime);
         const topicData = await Topics.getTopicFields(tid, ['cid', 'deleted', 'pinned']);
         // The next line calls a function in a module that has not been updated to TS yet
@@ -108,10 +110,10 @@ export = function (Topics: TopicsType) {
         }
     };
 
-    Topics.updateRecent = async function (tid: number, timestamp: string) {
-        let data = { tid: tid, timestamp: timestamp };
+    Topics.updateRecent = async function (tid: number, timestamp: number): Promise<void> {
+        let data : { [key: string]: number } = { tid: tid, timestamp: timestamp };
         if (plugins.hooks.hasListeners('filter:topics.updateRecent')) {
-            data = await plugins.hooks.fire('filter:topics.updateRecent', { tid: tid, timestamp: timestamp });
+            data = await plugins.hooks.fire('filter:topics.updateRecent', { tid: tid, timestamp: timestamp }) as { [key: string]: number };
         }
         if (data && data.tid && data.timestamp) {
             // The next line calls a function in a module that has not been updated to TS yet
