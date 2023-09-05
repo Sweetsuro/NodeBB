@@ -56,7 +56,7 @@ export = function (Topics: TopicsType) {
             stop: stop,
             filter: filter,
             sort: 'recent',
-        });
+        }) as TopicsLink;
     };
 
     /* not an orphan method, used in widget-essentials */
