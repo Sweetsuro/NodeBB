@@ -12,11 +12,11 @@ interface OptionType {
 }
 
 interface TopicsLink {
-    topics: TopicObject;
+    topics: TopicObject[];
     nextStart: number;
 }
 
-interface SortedTopicsLink {
+interface SortedTopicsArgs {
     cids: number,
     uid: number,
     start: number,
@@ -25,12 +25,18 @@ interface SortedTopicsLink {
     sort: string;
 }
 
+interface SortedTopicsLink {
+    nextStart: number,
+    topicCount: number,
+    topics: TopicObject[],
+}
+
 interface TopicsType {
-    getRecentTopics(cid: number, uid: number, start: number, stop: number, filter: string): Promise<TopicsLink>;
-    getSortedTopics(dict: SortedTopicsLink): Promise<TopicsLink>;
+    getRecentTopics(cid: number, uid: number, start: number, stop: number, filter: string): Promise<SortedTopicsLink>;
+    getSortedTopics(dict: SortedTopicsArgs): Promise<SortedTopicsLink>;
     getLatestTopics(options: OptionType): Promise<TopicsLink>;
     getLatestTidsFromSet(key: string, start: number, stop: number, term: string): Promise<number[]>;
-    getTopics(tids: number[], options: OptionType): Promise<TopicObject>;
+    getTopics(tids: number[], options: OptionType): Promise<TopicObject[]>;
     updateLastPostTimeFromLastPid(tid: number): Promise<void>;
     getLatestUndeletedPid(tid: number): Promise<number>;
     updateLastPostTime(tid: number, lastposttime: number): Promise<void>;
@@ -48,7 +54,7 @@ export = function (Topics: TopicsType) {
     };
 
     Topics.getRecentTopics = async function (cid: number, uid: number,
-        start: number, stop: number, filter: string): Promise<TopicsLink> {
+        start: number, stop: number, filter: string): Promise<SortedTopicsLink> {
         return await Topics.getSortedTopics({
             cids: cid,
             uid: uid,
@@ -56,7 +62,7 @@ export = function (Topics: TopicsType) {
             stop: stop,
             filter: filter,
             sort: 'recent',
-        }) as TopicsLink;
+        });
     };
 
     /* not an orphan method, used in widget-essentials */
